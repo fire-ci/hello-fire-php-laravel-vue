@@ -9,7 +9,8 @@
     "sass",
     "scss",
     "pug",
-    "jest"
+    "jest",
+    "docker"
   ],
   "authors": [{
       "name": "Alefe Souza",
