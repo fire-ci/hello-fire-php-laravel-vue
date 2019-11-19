@@ -5,13 +5,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ci
-    # container_name: laravel-vue-boilerplate-ci
     command: dockerize -wait tcp://mysqldb:3306 -timeout 20s bash -c "php artisan migrate --seed && composer run permissions && composer test"
     depends_on:
       - mysqldb
   mysqldb:
     image: mysql:5.7.21
-    # container_name: ${DB_CONNECTION}
     restart: always
     env_file:
       - .env
