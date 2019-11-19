@@ -1,0 +1,64 @@
+FROM php:7.1.26-apache AS base
+
+# Base image configuration
+
+
+RUN echo "JUST TRYING"
+
+RUN a2enmod rewrite
+
+RUN apt-get update \
+  && apt-get install -y zlib1g-dev libicu-dev wget gnupg g++ git openssh-client libpng-dev \
+  && docker-php-ext-configure intl \
+  && docker-php-ext-install intl pdo_mysql zip
+
+RUN pecl install xdebug-2.6.1 && docker-php-ext-enable xdebug
+
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - \
+  && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+  && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+
+RUN apt-get update \
+  && apt-get install -y nodejs \
+  && apt-get install -y yarn
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+ENV DOCKERIZE_VERSION v0.6.0
+RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
+WORKDIR /var/www/html
+
+COPY composer.json .
+COPY composer.lock .
+COPY .env.docker .
+COPY database ./database
+
+FROM base AS composerdependencies
+
+RUN composer run env:copy
+RUN composer install --no-scripts --no-suggest --no-interaction --prefer-dist --optimize-autoloader
+
+COPY package.json .
+COPY yarn.lock .
+
+FROM composerdependencies AS yarndependencies
+
+RUN yarn
+
+FROM yarndependencies AS runtime
+
+COPY . .
+
+RUN composer run key:generate
+RUN composer run jwt:generate
+RUN php artisan vue-i18n:generate
+
+# Let's have UI tests as part of the container build. If they fail there is no need to proceed further
+# composer test needs the DB to be up and running so is not tested
+RUN yarn test
+
+COPY ./docker/php/php.ini /usr/local/etc/php/conf.d/php.ini
+COPY ./docker/apache2/httpd-vhosts.conf /etc/apache2/sites-enabled/000-default.conf
