@@ -30,7 +30,7 @@
     "apollo-boost": "^0.1.23",
     "axios": "^0.18.0",
     "bootstrap": "^4.2.1",
-    "bootstrap-vue": "^2.0.0-rc.11",
+    "bootstrap-vue": "^2.0.0-rc.12",
     "graphql": "^14.0.2",
     "laravel-echo": "^1.5.2",
     "promise-polyfill": "^8.1.0",
